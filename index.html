@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
     <meta name="description"
         content="אפליקציית תקשורת תומכת וחלופית (AAC) להקראה קולית של טקסט בחירת קול אישי ומשפטים מהירים.">
     <title>הקול של עדן - אפליקציית תקשורת והקראה קולית</title>
@@ -218,6 +219,12 @@
                         </div>
                     </div>
 
+                    <!-- Diagnostics Trigger -->
+                    <button id="run-diagnostics-btn" class="action-sub-btn"
+                        style="margin-top: 15px; width: 100%; justify-content: center; font-weight: 600;">
+                        <i class="fa-solid fa-microscope"></i> הרץ אבחון ובדיקת תקינות הקראה
+                    </button>
+
                     <div class="sliders-container">
                         <!-- Speed Slider -->
                         <div class="slider-wrapper">
@@ -321,6 +328,22 @@
                                 <button type="submit" class="modal-btn primary">שמור כפתור</button>
                             </div>
                         </form>
+                    </div>
+                </div>
+
+                <!-- Diagnostics Modal -->
+                <div class="modal-backdrop" id="diagnostics-modal">
+                    <div class="modal-content" style="max-width: 600px;">
+                        <h3><i class="fa-solid fa-square-poll-vertical"></i> דוח אבחון תקינות מערכת</h3>
+                        <div id="diagnostics-log"
+                            style="background: rgba(10, 14, 23, 0.95); opacity: 0.95; padding: 16px; border-radius: var(--border-radius-md); font-family: monospace; font-size: 0.82rem; color: #39ff14; max-height: 300px; overflow-y: auto; text-align: left; direction: ltr; margin-bottom: 20px; border: 1px solid var(--border-color);">
+                            <!-- Diagnostics logs will be written here -->
+                        </div>
+                        <div class="modal-actions" style="margin-top: 15px;">
+                            <button type="button" id="copy-diagnostics-btn" class="modal-btn primary"
+                                style="background: var(--accent-gradient);">העתק דוח לקליפבורד</button>
+                            <button type="button" id="close-diagnostics-btn" class="modal-btn secondary">סגור</button>
+                        </div>
                     </div>
                 </div>
             </section>

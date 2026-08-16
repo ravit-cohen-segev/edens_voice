@@ -1,3 +1,15 @@
+// LocalStorage Safe Parser Helper
+function safeGetJSONFromLocalStorage(key, fallbackValue) {
+    try {
+        const item = localStorage.getItem(key);
+        if (!item || item === "undefined") return fallbackValue;
+        return JSON.parse(item);
+    } catch (e) {
+        console.error("Failed to parse localStorage key:", key, e);
+        return fallbackValue;
+    }
+}
+
 // Application State
 const state = {
     voices: [],
@@ -7,10 +19,17 @@ const state = {
     rate: parseFloat(localStorage.getItem('speechRate')) || 1.0,
     pitch: parseFloat(localStorage.getItem('speechPitch')) || 1.0,
     volume: parseFloat(localStorage.getItem('speechVolume')) || 1.0,
-    theme: localStorage.getItem('theme') || 'dark',
+    theme: (function () {
+        if (!localStorage.getItem('hasPinkThemeRun')) {
+            localStorage.setItem('hasPinkThemeRun', 'true');
+            localStorage.setItem('theme', 'pink');
+            return 'pink';
+        }
+        return localStorage.getItem('theme') || 'pink';
+    })(),
     instantSpeak: localStorage.getItem('instantSpeak') === 'true',
-    customPhrases: JSON.parse(localStorage.getItem('customPhrases')) || [],
-    history: JSON.parse(localStorage.getItem('speechHistory')) || [],
+    customPhrases: safeGetJSONFromLocalStorage('customPhrases', []),
+    history: safeGetJSONFromLocalStorage('speechHistory', []),
     categoryFilter: 'all',
     synth: window.speechSynthesis,
     activeUtterance: null,
@@ -90,11 +109,23 @@ const docElements = {
     // Typo elements
     suggestionBox: document.getElementById('suggestion-box'),
     suggestionChip: document.getElementById('suggestion-chip'),
-    dismissSuggestion: document.getElementById('dismiss-suggestion')
+    dismissSuggestion: document.getElementById('dismiss-suggestion'),
+
+    // Diagnostics elements
+    runDiagnosticsBtn: document.getElementById('run-diagnostics-btn'),
+    diagnosticsModal: document.getElementById('diagnostics-modal'),
+    diagnosticsLog: document.getElementById('diagnostics-log'),
+    copyDiagnosticsBtn: document.getElementById('copy-diagnostics-btn'),
+    closeDiagnosticsBtn: document.getElementById('close-diagnostics-btn')
 };
+
+let isInitialized = false;
 
 // Initialize Application
 function initialize() {
+    if (isInitialized) return;
+    isInitialized = true;
+
     // Theme setup
     document.body.setAttribute('data-theme', state.theme);
     updateThemeIcon();
@@ -117,8 +148,16 @@ function initialize() {
     // Set preferred gender initial state
     setRadioCheckedValue('preferred-gender', state.preferredGender);
 
-    // Load voices
-    loadVoices();
+    // Load voices with retry fallback for browsers (Chrome/Safari getVoices async issue)
+    let voicesRetryCount = 0;
+    const voicesRetryInterval = setInterval(() => {
+        loadVoices();
+        if ((state.voices && state.voices.length > 0) || voicesRetryCount > 10) {
+            clearInterval(voicesRetryInterval);
+        }
+        voicesRetryCount++;
+    }, 200);
+
     if (state.synth) {
         state.synth.onvoiceschanged = () => {
             loadVoices();
@@ -363,6 +402,16 @@ function loadVoices() {
 
     // Toggle warning if no Hebrew local voice is found
     const hasHebrewLocalVoice = state.voices.some(v => v.lang.startsWith('he'));
+
+    // Auto-switch to cloud if no local Hebrew voice is found to prevent silent fallback issues
+    if (!hasHebrewLocalVoice && state.voices.length > 0 && state.voiceSource === 'system') {
+        state.voiceSource = 'cloud';
+        localStorage.setItem('voiceSource', 'cloud');
+        setRadioCheckedValue('voice-source', 'cloud');
+        updateVoiceSourceUI();
+        console.log("No local Hebrew voice found. Automatically switched to Cloud TTS.");
+    }
+
     if (docElements.noHebrewWarning) {
         if (!hasHebrewLocalVoice && state.voiceSource === 'system') {
             docElements.noHebrewWarning.style.display = 'flex';
@@ -512,6 +561,135 @@ function speak(text) {
     state.synth.speak(utterance);
 }
 
+// Chunk text to fit within service limits (e.g. 180 chars for Google Translate)
+function splitIntoChunks(text, maxLength) {
+    const words = text.split(/\s+/);
+    const chunks = [];
+    let currentChunk = "";
+
+    for (let word of words) {
+        if ((currentChunk + " " + word).trim().length > maxLength) {
+            if (currentChunk.trim().length > 0) {
+                chunks.push(currentChunk.trim());
+            }
+            currentChunk = word;
+        } else {
+            currentChunk = currentChunk ? (currentChunk + " " + word) : word;
+        }
+    }
+    if (currentChunk.trim().length > 0) {
+        chunks.push(currentChunk.trim());
+    }
+    return chunks;
+}
+
+// Chunked playback loop for Cloud voices
+function playCloudChunks(chunks, index) {
+    if (index >= chunks.length) {
+        cleanupSpeakingState();
+        addHistoryItem(chunks.join(" "));
+        return;
+    }
+
+    const text = chunks[index];
+
+    // Try tw-ob first, fallback to gtx, fallback to local Hebrew voice if available
+    playGoogleTTSChunk(text, 'tw-ob', () => {
+        console.log("tw-ob failed, trying gtx...");
+        playGoogleTTSChunk(text, 'gtx', () => {
+            console.error("Cloud TTS completely failed on this chunk.");
+            fallbackToSystemVoiceForChunk(text, () => {
+                // Continue to next chunk
+                playCloudChunks(chunks, index + 1);
+            });
+        }, () => {
+            playCloudChunks(chunks, index + 1);
+        });
+    }, () => {
+        playCloudChunks(chunks, index + 1);
+    });
+}
+
+function playGoogleTTSChunk(text, client, onError, onEnded) {
+    const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=he&client=${client}&q=${encodeURIComponent(text)}`;
+    const audio = new Audio();
+    audio.referrerPolicy = 'no-referrer';
+    audio.src = url;
+    state.activeAudio = audio;
+    audio.volume = state.volume;
+
+    audio.addEventListener('play', () => {
+        docElements.visualizer.classList.add('playing');
+        docElements.stopBtn.removeAttribute('disabled');
+        const icon = document.querySelector('.logo-icon i');
+        if (icon) icon.className = "fa-solid fa-waveform-lines fa-bounce";
+    });
+
+    audio.addEventListener('ended', () => {
+        onEnded();
+    });
+
+    let hasFailed = false;
+    const handleError = (e) => {
+        if (hasFailed) return;
+        hasFailed = true;
+        const mediaError = audio.error;
+        console.error(
+            `Google TTS chunk failed [client=${client}] url=${url}`,
+            `MediaError code=${mediaError?.code} message=${mediaError?.message || '(none)'}`,
+            e
+        );
+        cleanupSpeakingState();
+        onError(e);
+    };
+
+    audio.addEventListener('error', handleError);
+
+    audio.play().catch(err => {
+        console.error(`Google TTS play() rejected [client=${client}] url=${url}`, err.name, err.message);
+        handleError(err);
+    });
+}
+
+function fallbackToSystemVoiceForChunk(text, callback) {
+    const localHebrewVoice = state.voices.find(v => v.lang.startsWith('he'));
+    const localEnglishVoice = state.voices.find(v => v.lang.startsWith('en'));
+    const voiceToUse = localHebrewVoice || localEnglishVoice;
+    
+    if (voiceToUse && state.synth) {
+        if (state.synth.speaking) {
+            state.synth.cancel();
+        }
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.voice = voiceToUse;
+        utterance.lang = voiceToUse.lang;
+        utterance.rate = state.rate;
+        utterance.pitch = state.pitch;
+        utterance.volume = state.volume;
+
+        utterance.onstart = () => {
+            state.activeUtterance = utterance;
+            docElements.visualizer.classList.add('playing');
+            docElements.stopBtn.removeAttribute('disabled');
+            if (!localHebrewVoice) {
+                showNotification("משתמש בקול אנגלית - לא נמצא קול עברית. להתקין בהגדרות Windows.", "warning");
+            }
+        };
+        utterance.onend = () => {
+            cleanupSpeakingState();
+            callback();
+        };
+        utterance.onerror = () => {
+            cleanupSpeakingState();
+            callback();
+        };
+        state.synth.speak(utterance);
+    } else {
+        showNotification("⚠️ לא נמצא קול כלשהו. בדוק בהגדרות Windows: Settings > Time & Language > Speech > Add voices", "danger");
+        callback();
+    }
+}
+
 // Speak using Google TTS Cloud Fallback
 function speakCloud(text) {
     if (state.synth && state.synth.speaking) {
@@ -520,48 +698,16 @@ function speakCloud(text) {
 
     if (state.activeAudio) {
         state.activeAudio.pause();
+        state.activeAudio = null;
     }
 
-    // Google Translate TTS URL (Female Hebrew Voice)
-    const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=he&client=tw-ob&q=${encodeURIComponent(text)}`;
-    const audio = new Audio(url);
-    state.activeAudio = audio;
-
-    audio.volume = state.volume;
-
-    audio.addEventListener('play', () => {
-        docElements.visualizer.classList.add('playing');
-        docElements.stopBtn.removeAttribute('disabled');
-        // Icon animation pulse
-        const icon = document.querySelector('.logo-icon i');
-        if (icon) icon.className = "fa-solid fa-waveform-lines fa-bounce";
-    });
-
-    audio.addEventListener('ended', () => {
-        cleanupSpeakingState();
-        addHistoryItem(text);
-    });
-
-    audio.addEventListener('error', (e) => {
-        console.error("Cloud TTS error:", e);
-        cleanupSpeakingState();
-        triggerCloudFallback(text);
-    });
-
-    audio.play().catch(err => {
-        console.warn("Could not play cloud audio. Browser might require user gesture or request was rejected (CORS/limit).", err);
-        cleanupSpeakingState();
-        triggerCloudFallback(text);
-    });
+    const chunks = splitIntoChunks(text, 180);
+    playCloudChunks(chunks, 0);
 }
 
 // Fallback helper if Google Cloud TTS is blocked/failed
 function triggerCloudFallback(text) {
-    alert("שים לב: שירות קול הענן של גוגל אינו זמין כעת (ייתכן עקב חסימת CORS או עומס). האפליקציה תחזור זמנית להקראה באמצעות קולות המחשב המקומיים.");
-    state.voiceSource = 'system';
-    setRadioCheckedValue('voice-source', 'system');
-    updateVoiceSourceUI();
-    speak(text);
+    fallbackToSystemVoiceForChunk(text, () => { });
 }
 
 // Reset UI states after speaking finishes
@@ -892,7 +1038,13 @@ function attachEventListeners() {
 
     // Theme toggler
     docElements.themeToggle.addEventListener('click', () => {
-        state.theme = state.theme === 'dark' ? 'light' : 'dark';
+        if (state.theme === 'dark') {
+            state.theme = 'light';
+        } else if (state.theme === 'light') {
+            state.theme = 'pink';
+        } else {
+            state.theme = 'dark';
+        }
         document.body.setAttribute('data-theme', state.theme);
         localStorage.setItem('theme', state.theme);
         updateThemeIcon();
@@ -948,6 +1100,160 @@ function attachEventListeners() {
         docElements.customText.value = '';
         docElements.customLabel.value = '';
     });
+    // Diagnostics modal actions
+    docElements.runDiagnosticsBtn.addEventListener('click', () => {
+        runDiagnostics();
+    });
+
+    docElements.closeDiagnosticsBtn.addEventListener('click', () => {
+        docElements.diagnosticsModal.classList.remove('open');
+    });
+
+    docElements.diagnosticsModal.addEventListener('click', (e) => {
+        if (e.target === docElements.diagnosticsModal) {
+            docElements.diagnosticsModal.classList.remove('open');
+        }
+    });
+
+    docElements.copyDiagnosticsBtn.addEventListener('click', () => {
+        if (window.lastDiagnosticsReport) {
+            navigator.clipboard.writeText(window.lastDiagnosticsReport)
+                .then(() => showNotification("הדוח הועתק לקליפבורד בהצלחה!", "success"))
+                .catch(() => showNotification("לא ניתן היה להעתיק לקליפבורד.", "danger"));
+        }
+    });
+}
+
+// Diagnostics & Testing Module
+function runDiagnostics() {
+    const logs = [];
+    function printLog(msg, type = 'info') {
+        const timestamp = new Date().toISOString().split('T')[1].substring(0, 8);
+        const prefix = `[${timestamp}] [${type.toUpperCase()}] `;
+        logs.push(prefix + msg);
+
+        // Render in modal
+        const color = type === 'danger' ? '#ef4444' : type === 'warning' ? '#f59e0b' : '#39ff14';
+        const line = document.createElement('div');
+        line.style.color = color;
+        line.style.marginBottom = '6px';
+        line.innerText = prefix + msg;
+        docElements.diagnosticsLog.appendChild(line);
+        docElements.diagnosticsLog.scrollTop = docElements.diagnosticsLog.scrollHeight;
+    }
+
+    docElements.diagnosticsLog.innerHTML = '';
+    docElements.diagnosticsModal.classList.add('open');
+
+    printLog("Starting System Diagnostics Runner...", "info");
+
+    // Check 1: protocol
+    printLog("Current protocol: " + window.location.protocol, "info");
+    if (window.location.protocol === 'file:') {
+        printLog("WARNING: Running on file:// protocol. Browsers heavily restrict audio autoplay and cross-origin Google Translate TTS under file://. Please use http://localhost:8000.", "warning");
+    } else {
+        printLog("Perfect: Running over HTTP/development server.", "success");
+    }
+
+    // Check 2: Web Speech Synthesis API support
+    if (!window.speechSynthesis) {
+        printLog("CRITICAL: window.speechSynthesis is NOT supported in this browser!", "danger");
+    } else {
+        printLog("Success: window.speechSynthesis API supported.", "success");
+    }
+
+    // Check 3: Check loaded local voices
+    const voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+    printLog(`Loaded voices count from API: ${voices.length}`, "info");
+
+    const hebrewVoices = voices.filter(v => v.lang.startsWith('he'));
+    if (hebrewVoices.length === 0) {
+        printLog("WARNING: No local Hebrew SAPI5/OneCore voices found on this computer. Local TTS in Hebrew will output silence. Auto-switching to Google Cloud TTS is recommended.", "warning");
+        voices.forEach(v => {
+            if (v.lang.startsWith('en')) {
+                printLog(`Available English voice: ${v.name} (${v.lang})`, "info");
+            }
+        });
+    } else {
+        printLog(`Success: Found ${hebrewVoices.length} local Hebrew voice(s):`, "success");
+        hebrewVoices.forEach(v => {
+            printLog(`- Hebrew Voice: ${v.name} (${v.lang})`, "info");
+        });
+    }
+
+    // Check 4: Selected voice source configuration
+    printLog(`Configured voiceSource: ${state.voiceSource}`, "info");
+    printLog(`Configured preferredGender: ${state.preferredGender}`, "info");
+    printLog(`Configured selectedVoiceName: ${state.selectedVoiceName}`, "info");
+
+    // Check 5: LocalStorage values
+    try {
+        const phrases = localStorage.getItem('customPhrases');
+        printLog(`LocalStorage customPhrases raw bytes length: ${phrases ? phrases.length : 0}`, "info");
+        const history = localStorage.getItem('speechHistory');
+        printLog(`LocalStorage speechHistory raw bytes length: ${history ? history.length : 0}`, "info");
+    } catch (e) {
+        printLog(`Error checking localStorage: ${e.message}`, "danger");
+    }
+
+    // Check 6: Google Translate TTS Network connectivity (async)
+    printLog("Testing Google Translate Cloud TTS endpoints connectivity...", "info");
+    const testText = "בדיקה";
+    const testClient = 'tw-ob';
+    const testUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=he&client=${testClient}&q=${encodeURIComponent(testText)}`;
+
+    const audio = new Audio();
+    audio.referrerPolicy = 'no-referrer';
+
+    // Set a validation timeout
+    const testTimeout = setTimeout(() => {
+        printLog("Google Cloud TTS test TIMEOUT (4 seconds). The service might be blocked by CORS or rate limits.", "danger");
+        audio.src = "";
+    }, 4000);
+
+    audio.addEventListener('canplaythrough', () => {
+        clearTimeout(testTimeout);
+        printLog("SUCCESS: Google Cloud TTS loaded audio chunk successfully!", "success");
+        printLog("Diagnostics successfully completed. All core systems verified.", "success");
+        audio.src = "";
+    });
+
+    audio.addEventListener('error', (e) => {
+        clearTimeout(testTimeout);
+        printLog(`WARNING: Google Cloud TTS test failed with client=${testClient}. Testing fallback client=gtx...`, "warning");
+
+        // Retry with gtx
+        const gtxUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=he&client=gtx&q=${encodeURIComponent(testText)}`;
+        const gtxAudio = new Audio();
+        gtxAudio.referrerPolicy = 'no-referrer';
+
+        const gtxTimeout = setTimeout(() => {
+            printLog("Google Cloud TTS fallback client=gtx TIMEOUT (4 seconds).", "danger");
+            printLog("Cloud TTS failed completely. Please make sure you are connected to the internet.", "danger");
+            gtxAudio.src = "";
+        }, 4000);
+
+        gtxAudio.addEventListener('canplaythrough', () => {
+            clearTimeout(gtxTimeout);
+            printLog("SUCCESS: Google Cloud TTS fallback client=gtx loaded audio chunk successfully!", "success");
+            printLog("Diagnostics successfully completed.", "success");
+            gtxAudio.src = "";
+        });
+
+        gtxAudio.addEventListener('error', (err) => {
+            clearTimeout(gtxTimeout);
+            printLog("CRITICAL: Both tw-ob and gtx Google Cloud TTS formats failed to load in this browser.", "danger");
+            printLog("If you have no local Hebrew voice, Hebrew cannot be spoken. Please run on Microsoft Edge.", "danger");
+            gtxAudio.src = "";
+        });
+
+        gtxAudio.src = gtxUrl;
+    });
+
+    audio.src = testUrl;
+
+    // Attach diagnostic output to windows object helper for easy copy
+    window.lastDiagnosticsReport = logs.join('\n');
 }
 
 // Real-time Hebrew/English speech segmentation on spaces
@@ -979,9 +1285,11 @@ function updateCharCounter() {
 function updateThemeIcon() {
     const i = docElements.themeToggle.querySelector('i');
     if (state.theme === 'dark') {
-        i.className = 'fa-solid fa-sun';
-    } else {
         i.className = 'fa-solid fa-moon';
+    } else if (state.theme === 'light') {
+        i.className = 'fa-solid fa-sun';
+    } else if (state.theme === 'pink') {
+        i.className = 'fa-solid fa-heart';
     }
 }
 
@@ -1040,6 +1348,33 @@ function escapeHtml(unsafe) {
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+}
+
+function showNotification(message, type = 'info') {
+    const existing = document.querySelectorAll('.toast-notification');
+    existing.forEach(t => t.remove());
+
+    const toast = document.createElement('div');
+    toast.className = `toast-notification ${type}`;
+
+    let iconClass = 'fa-circle-info';
+    if (type === 'danger') iconClass = 'fa-circle-xmark';
+    else if (type === 'warning') iconClass = 'fa-triangle-exclamation';
+    else if (type === 'success') iconClass = 'fa-circle-check';
+
+    toast.innerHTML = `
+        <i class="fa-solid ${iconClass}" style="color: ${type === 'danger' ? 'var(--danger-color)' : type === 'warning' ? 'var(--warning-color)' : type === 'success' ? 'var(--success-color)' : 'var(--accent-color)'}; font-size: 1.2rem;"></i>
+        <span>${escapeHtml(message)}</span>
+    `;
+
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.classList.add('fade-out');
+        setTimeout(() => {
+            toast.remove();
+        }, 300);
+    }, 4000);
 }
 
 // Kickstart Initialization

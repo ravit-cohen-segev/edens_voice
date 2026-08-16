@@ -40,8 +40,6 @@
 
     --text-primary: #0f172a;
     --text-secondary: #475569;
-    --text-muted: #94d3b8;
-    /* Handled carefully below */
     --text-muted: #64748b;
 
     --accent-color: #4f46e5;
@@ -50,6 +48,31 @@
 
     --card-shadow: 0 10px 30px -15px rgba(99, 102, 241, 0.1);
     --glow-shadow: 0 0 20px rgba(79, 70, 229, 0.15);
+}
+
+/* Pink Theme Variables */
+[data-theme="pink"] {
+    --bg-primary: #ffecf2;
+    /* bubblegum pink base */
+    --bg-secondary: #ffd5e3;
+    /* slightly deeper sweet pink */
+    --bg-panel: rgba(255, 255, 255, 0.8);
+    --border-color: rgba(255, 20, 147, 0.15);
+    --border-hover: rgba(255, 20, 147, 0.35);
+
+    --text-primary: #4a001a;
+    /* deep dark ruby for high readability and contrast */
+    --text-secondary: #8c0032;
+    --text-muted: #c85a85;
+
+    --accent-color: #ff1493;
+    /* Classic Barbie Hot Pink */
+    --accent-glow: rgba(255, 20, 147, 0.25);
+    --accent-gradient: linear-gradient(135deg, #ff1493 0%, #ff69b4 100%);
+    /* Hot Pink to bubblegum gradient */
+
+    --card-shadow: 0 10px 30px -15px rgba(255, 20, 147, 0.18);
+    --glow-shadow: 0 0 20px rgba(255, 20, 147, 0.35);
 }
 
 /* Base resets & fonts */
@@ -261,7 +284,8 @@ textarea {
     outline: none;
 }
 
-[data-theme="light"] textarea {
+[data-theme="light"] textarea,
+[data-theme="pink"] textarea {
     background: rgba(255, 255, 255, 0.6);
 }
 
@@ -271,7 +295,8 @@ textarea:focus {
     background: rgba(10, 14, 23, 0.6);
 }
 
-[data-theme="light"] textarea:focus {
+[data-theme="light"] textarea:focus,
+[data-theme="pink"] textarea:focus {
     background: #ffffff;
 }
 
@@ -296,8 +321,9 @@ textarea:focus {
     transition: all var(--transition-speed);
 }
 
-[data-theme="light"] .action-sub-btn {
-    background: rgba(241, 245, 249, 0.8);
+[data-theme="light"] .action-sub-btn,
+[data-theme="pink"] .action-sub-btn {
+    background: rgba(255, 255, 255, 0.8);
 }
 
 .action-sub-btn:hover {
@@ -672,7 +698,8 @@ input[type="range"]::-webkit-slider-thumb:hover {
     gap: 12px;
 }
 
-[data-theme="light"] .history-item {
+[data-theme="light"] .history-item,
+[data-theme="pink"] .history-item {
     background: rgba(255, 255, 255, 0.5);
 }
 
@@ -978,7 +1005,9 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 [data-theme="light"] .form-group input,
-[data-theme="light"] .form-group select {
+[data-theme="light"] .form-group select,
+[data-theme="pink"] .form-group input,
+[data-theme="pink"] .form-group select {
     background: #ffffff;
 }
 
@@ -1184,6 +1213,11 @@ input[type="range"]::-webkit-slider-thumb:hover {
     border-color: rgba(99, 102, 241, 0.25);
 }
 
+[data-theme="pink"] .suggestion-box {
+    background: rgba(219, 112, 147, 0.08);
+    border-color: rgba(219, 112, 147, 0.3);
+}
+
 @keyframes slideInSuggestion {
     from {
         opacity: 0;
@@ -1267,7 +1301,8 @@ input[type="range"]::-webkit-slider-thumb:hover {
     line-height: 1.45;
 }
 
-[data-theme="light"] .warning-alert-box {
+[data-theme="light"] .warning-alert-box,
+[data-theme="pink"] .warning-alert-box {
     background: rgba(239, 68, 68, 0.05);
     border-color: rgba(239, 68, 68, 0.2);
 }
@@ -1277,4 +1312,57 @@ input[type="range"]::-webkit-slider-thumb:hover {
     margin-top: 1px;
     color: var(--danger-color);
     flex-shrink: 0;
+}
+
+/* Toast Notification */
+.toast-notification {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 16px 20px;
+    border-radius: var(--border-radius-md);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 2000;
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 500;
+    max-width: 380px;
+    direction: rtl;
+    animation: toastSlideIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: all 0.3s ease;
+}
+
+.toast-notification.danger {
+    border-left: 4px solid var(--danger-color);
+}
+
+.toast-notification.warning {
+    border-left: 4px solid var(--warning-color);
+}
+
+.toast-notification.success {
+    border-left: 4px solid var(--success-color);
+}
+
+@keyframes toastSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.toast-notification.fade-out {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
 }
