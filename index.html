@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="אפליקציית תקשורת תומכת וחלופית (AAC) להקראה קולית של טקסט בחירת קול אישי ומשפטים מהירים.">
+    <title>הקול של עדן - אפליקציית תקשורת והקראה קולית</title>
+
+    <!-- Google Fonts Links -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Rubik:ital,wght@0,300..900;1,300..900&display=swap"
+        rel="stylesheet">
+
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="app-container">
+
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo-area">
+                <div class="logo-icon">
+                    <i class="fa-solid fa-waveform-lines pulse-icon"></i>
+                </div>
+                <div class="logo-text">
+                    <h1>הקול של עדן</h1>
+                    <p>אפליקציית הקראה ותקשורת אישית</p>
+                </div>
+            </div>
+
+            <div class="header-controls">
+                <button id="theme-toggle" class="icon-btn" title="שינוי ערכת נושא" aria-label="שינוי ערכת נושא">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Workspace -->
+        <main class="app-main">
+
+            <!-- Right / Center Column: Text Input & Speak controls -->
+            <section class="core-panel text-panel">
+                <div class="panel-header">
+                    <h2><i class="fa-regular fa-comment-dots"></i> מה ברצונך להגיד?</h2>
+                    <span class="word-count" id="char-counter">0 תווים</span>
+                </div>
+
+                <div class="input-container">
+                    <textarea id="speech-text" placeholder="הקלד/י כאן את מה שברצונך לומר..." aria-label="טקסט להקראה"
+                        rows="4"></textarea>
+
+                    <div class="input-actions-overlay">
+                        <button id="clear-btn" class="action-sub-btn" title="נקה טקסט">
+                            <i class="fa-solid fa-trash-can"></i> נקה
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Typo Suggestion Box -->
+                <div class="suggestion-box" id="suggestion-box" style="display: none;">
+                    <span class="suggestion-caption"><i class="fa-solid fa-wand-magic-sparkles"></i> האם התכוונת
+                        ל:</span>
+                    <button type="button" id="suggestion-chip" class="suggestion-chip"></button>
+                    <button type="button" id="dismiss-suggestion" class="dismiss-suggestion" title="התעלם מההצעה"><i
+                            class="fa-solid fa-xmark"></i></button>
+                </div>
+
+                <!-- Speech visualizer & Action controls row -->
+                <div class="speech-controls-row">
+                    <!-- Visualizer -->
+                    <div class="visualizer-container" id="visualizer">
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                    </div>
+
+                    <!-- Main Buttons -->
+                    <div class="main-buttons">
+                        <button id="stop-btn" class="speak-btn stop" disabled>
+                            <i class="fa-solid fa-stop"></i> עצור
+                        </button>
+                        <button id="speak-btn" class="speak-btn play">
+                            <i class="fa-solid fa-volume-high"></i> דבֵּר!
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Quick Settings Quick Access -->
+                <div class="auto-speak-toggle">
+                    <label class="switch-container">
+                        <input type="checkbox" id="instant-speak-check">
+                        <span class="switch-slider"></span>
+                        <span class="switch-label">הקרא מילים בעת הקלדה (רווח הקראה)</span>
+                    </label>
+                </div>
+            </section>
+
+            <!-- Column Grid split for Voices and AAC Quick Board -->
+            <div class="grid-split">
+
+                <!-- Voice Configuration Panel -->
+                <section class="core-panel voice-panel">
+                    <div class="panel-header">
+                        <h2><i class="fa-solid fa-sliders"></i> הגדרות קול ושמע</h2>
+                    </div>
+
+                    <div class="settings-group">
+                        <label><i class="fa-solid fa-earth-americas"></i> מקור קול להקראה:</label>
+                        <div class="voice-source-selector">
+                            <label class="radio-tab">
+                                <input type="radio" name="voice-source" value="system" checked>
+                                <span>קולות המחשב</span>
+                            </label>
+                            <label class="radio-tab">
+                                <input type="radio" name="voice-source" value="cloud">
+                                <span>קול ענן (עברית גוגל)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="system-voice-settings">
+                        <div class="settings-group" style="margin-top: 10px;">
+                            <label><i class="fa-solid fa-venus-mars"></i> התאמת מגדר מועדף:</label>
+                            <div class="gender-selector">
+                                <label class="gender-btn">
+                                    <input type="radio" name="preferred-gender" value="all" checked>
+                                    <span>הכל</span>
+                                </label>
+                                <label class="gender-btn">
+                                    <input type="radio" name="preferred-gender" value="female">
+                                    <span>נקבה 👩</span>
+                                </label>
+                                <label class="gender-btn">
+                                    <input type="radio" name="preferred-gender" value="male">
+                                    <span>זכר 👨</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="settings-group" style="margin-top: 15px;">
+                            <div id="no-hebrew-warning" class="warning-alert-box" style="display: none;">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                <span>לא נמצא קול עברית מותקן במחשב זה. מומלץ לקרוא את מדריך העזרה למטה, או פשוט לעבור
+                                    לשימוש ב-<strong>קול ענן</strong> למעלה.</span>
+                            </div>
+                            <label for="voice-select"><i class="fa-solid fa-headset"></i> בחר/י קול מתוך הרשימה:</label>
+                            <div class="custom-select-wrapper">
+                                <select id="voice-select" class="custom-select">
+                                    <option value="" disabled selected>טוען קולות זמינים...</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Help Collapsible -->
+                    <div class="hebrew-help-container">
+                        <button type="button" class="help-toggle-btn" id="help-toggle-btn">
+                            <i class="fa-solid fa-circle-info"></i> חסר קול בעברית או מגדר מתאים?
+                        </button>
+                        <div class="help-content" id="help-content">
+                            <h4>מדריך קולות עברית של המערכת:</h4>
+
+                            <h5>במחשבי Windows:</h5>
+                            <p
+                                style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 8px; line-height: 1.4;">
+                                Windows מציעה קול מקומי מובנה בשם <strong>Asaf (זכר 👨)</strong>. להורדה והתקנה במחשב:
+                            </p>
+                            <ol>
+                                <li>לחצו על קיצור המקלדת <strong>Win + Ctrl + N</strong> לפתיחת הגדרות הקריין.</li>
+                                <li>תחת <em>קולו של הקריין</em>, לחצו על <strong>הוסף קולות מדור קודם (Add legacy
+                                        voices)</strong> כדי לפתוח את הגדרות הדיבור.</li>
+                                <li>תחת <em>ניהול קולות</em>, לחצו על <strong>הוסף קולות (Add voices)</strong>, בחרו
+                                    ב<strong>עברית</strong> והתקינו.</li>
+                                <li><strong>הפעילו מחדש את הדפדפן</strong> כדי להציג את הקול החדש ברשימה של "קולות
+                                    המחשב".</li>
+                            </ol>
+
+                            <h5 style="margin-top: 10px;">שימוש בקולות אינטרנט של Edge (איכותיים במיוחד):</h5>
+                            <p
+                                style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 8px; line-height: 1.4;">
+                                דפדפן Edge מספק קולות ענן טבעיים מעולים: <strong>Hila (נקבה 👩)</strong> ו-<strong>Avri
+                                    (זכר 👨)</strong>.
+                            </p>
+                            <ul
+                                style="padding-right: 18px; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 8px;">
+                                <li>הקולות מותנים בחיבור אינטרנט פעיל.</li>
+                                <li>מומלץ להריץ את האפליקציה תחת כתובת שרת (כמו הכתובת
+                                    <code>http://localhost:8000</code>) ולא בהפעלה ישירה מקובץ.
+                                </li>
+                                <li>טעינת קולות אלו ב-Edge עשויה לקחת מספר שניות לאחר טעינת העמוד.</li>
+                            </ul>
+
+                            <h5 style="margin-top: 10px;">במכשירי Mac / iPad / iPhone:</h5>
+                            <ol>
+                                <li>היכנסו אל <strong>הגדרות > נגישות > קריינות > דיבור > קולות</strong>.</li>
+                                <li>נווטו אל <strong>עברית</strong> והורידו את הקולות הרצויים (כמו <em>Carmit (נקבה
+                                        👩)</em> או <em>Carmel</em>).</li>
+                            </ol>
+
+                            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 10px;">
+                                * אפשרות <strong>"קול ענן"</strong> למעלה מבצעת פנייה ישירה לקבלת שמע, אך מוגבלת לטקסטים
+                                קצרים (עד 200 תווים) ומיועדת למצבי גיבוי בלבד.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="sliders-container">
+                        <!-- Speed Slider -->
+                        <div class="slider-wrapper">
+                            <div class="slider-labels">
+                                <span class="label"><i class="fa-solid fa-gauge-high"></i> מהירות הדיבור</span>
+                                <span class="val-display" id="rate-val">1.0x</span>
+                            </div>
+                            <input type="range" id="speech-rate" min="0.5" max="2" step="0.1" value="1.0"
+                                aria-label="מהירות דיבור">
+                        </div>
+
+                        <!-- Pitch Slider -->
+                        <div class="slider-wrapper">
+                            <div class="slider-labels">
+                                <span class="label"><i class="fa-solid fa-wave-square"></i> גובה טון (Pitch)</span>
+                                <span class="val-display" id="pitch-val">1.0</span>
+                            </div>
+                            <input type="range" id="speech-pitch" min="0.5" max="1.5" step="0.1" value="1.0"
+                                aria-label="גובה טון">
+                        </div>
+
+                        <!-- Volume Slider -->
+                        <div class="slider-wrapper">
+                            <div class="slider-labels">
+                                <span class="label"><i class="fa-solid fa-volume-low"></i> עוצמת שמע</span>
+                                <span class="val-display" id="volume-val">100%</span>
+                            </div>
+                            <input type="range" id="speech-volume" min="0" max="1" step="0.05" value="1.0"
+                                aria-label="עוצמת שמע">
+                        </div>
+                    </div>
+                </section>
+
+                <!-- History panel -->
+                <section class="core-panel history-panel">
+                    <div class="panel-header">
+                        <h2><i class="fa-solid fa-clock-rotate-left"></i> היסטוריית דיבור</h2>
+                        <button id="clear-history-btn" class="text-link-btn" title="נקה היסטוריה">נקה הכל</button>
+                    </div>
+                    <div class="history-list" id="history-container">
+                        <!-- History items will be injected here -->
+                        <p class="empty-message">אין ברשומות היסטוריה עדיין.</p>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Quick AAC dashboard -->
+            <section class="core-panel quick-board-panel">
+                <div class="panel-header">
+                    <h2><i class="fa-solid fa-hand-holding-heart"></i> כפתורי דיבור מהיר תקשורתיים</h2>
+                    <div class="quick-board-controls">
+                        <button id="add-phrase-toggle" class="action-sub-btn accent" title="הוסף משפט מותאם אישית">
+                            <i class="fa-solid fa-plus"></i> הוסף כפתור חדש
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Category tabs -->
+                <div class="category-tabs" id="category-tabs-container">
+                    <button class="tab-btn active" data-category="all">הכל</button>
+                    <button class="tab-btn" data-category="general">כללי</button>
+                    <button class="tab-btn" data-category="needs">צרכים</button>
+                    <button class="tab-btn" data-category="feelings">רגשות</button>
+                    <button class="tab-btn" data-category="social">חברתי</button>
+                    <button class="tab-btn" data-category="custom">מותאם מראש</button>
+                </div>
+
+                <!-- Buttons Grid -->
+                <div class="quick-grid" id="quick-grid-container">
+                    <!-- Standard speech buttons are loaded dynamically -->
+                </div>
+
+                <!-- Expanded Modal/Form to Add Custom Button -->
+                <div class="modal-backdrop" id="custom-phrase-modal">
+                    <div class="modal-content">
+                        <h3><i class="fa-solid fa-circle-plus"></i> יצירת כפתור דיבור מותאם אישית</h3>
+                        <form id="custom-phrase-form">
+                            <div class="form-group">
+                                <label for="custom-text">הטקסט שיוקרא בקול:</label>
+                                <input type="text" id="custom-text" placeholder="לדוגמה: אני רוצה לשתות מים בבקשה"
+                                    required>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="custom-label">שם שיוצג על הכפתור (אופציונלי):</label>
+                                    <input type="text" id="custom-label" placeholder="לדוגמה: מים בבקשה">
+                                </div>
+                                <div class="form-group">
+                                    <label for="custom-category">קטגוריה:</label>
+                                    <select id="custom-category">
+                                        <option value="general">כללי</option>
+                                        <option value="needs">צרכים</option>
+                                        <option value="feelings">רגשות</option>
+                                        <option value="social">חברתי</option>
+                                        <option value="custom" selected>מותאם מראש</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="modal-actions">
+                                <button type="button" id="close-modal-btn" class="modal-btn secondary">ביטול</button>
+                                <button type="submit" class="modal-btn primary">שמור כפתור</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>© 2026 הקול של עדן - נוצר באהבה כדי להעניק לכל אחד את האפשרות להישמע ולהביע דעה.</p>
+        </footer>
+    </div>
+
+    <!-- Script File -->
+    <script src="app.js"></script>
+</body>
+
+</html>
