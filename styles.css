@@ -924,6 +924,16 @@ input[type="range"]::-webkit-slider-thumb:hover {
     /* Cyan */
 }
 
+.quick-item[data-cat="food"] .item-icon {
+    color: #f97316;
+    /* Orange */
+}
+
+.quick-item[data-cat="games"] .item-icon {
+    color: #8b5cf6;
+    /* Violet */
+}
+
 /* Modal backdrop & content */
 .modal-backdrop {
     display: none;

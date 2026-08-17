@@ -52,11 +52,21 @@ const commonHebrewWords = [
 
 // Default AAC Phrases
 const defaultPhrases = [
-    { text: "שלום", label: "שלום", category: "social", icon: "fa-person-wave-command" },
-    { text: "תודה רבה", label: "תודה רבה", category: "social", icon: "fa-heart" },
-    { text: "בבקשה", label: "בבקשה", category: "social", icon: "fa-circle-right" },
-    { text: "מה שלומך?", label: "מה שלומך?", category: "social", icon: "fa-circle-question" },
-    { text: "בוקר טוב", label: "בוקר טוב", category: "social", icon: "fa-sun" },
+    { text: "שלום", label: "שלום", category: "social", icon: "fa-child-reaching" },
+    { text: "תודה רבה", label: "תודה רבה", category: "social", icon: "fa-child" },
+    { text: "בבקשה", label: "בבקשה", category: "social", icon: "fa-child" },
+    { text: "מה שלומך?", label: "מה שלומך?", category: "social", icon: "fa-children" },
+    { text: "בוקר טוב", label: "בוקר טוב", category: "social", icon: "fa-child" },
+    { text: "אימא", label: "אימא", category: "social", icon: "fa-user" },
+    { text: "אבא", label: "אבא", category: "social", icon: "fa-user" },
+    { text: "סבא", label: "סבא", category: "social", icon: "fa-user" },
+    { text: "סבתא", label: "סבתא", category: "social", icon: "fa-user" },
+    { text: "דניאל", label: "דניאל", category: "social", icon: "fa-user" },
+    { text: "יונתן", label: "יונתן", category: "social", icon: "fa-user" },
+    { text: "חברים", label: "חברים", category: "social", icon: "fa-users" },
+    { text: "פאינה", label: "פאינה", category: "social", icon: "fa-user" },
+    { text: "נילי", label: "נילי", category: "social", icon: "fa-user" },
+    { text: "מירי", label: "מירי", category: "social", icon: "fa-user" },
     { text: "אני צריך עזרה", label: "עזרה", category: "needs", icon: "fa-handshake-angle" },
     { text: "אני רעב", label: "אני רעב", category: "needs", icon: "fa-utensils" },
     { text: "אני צמא", label: "אני צמא", category: "needs", icon: "fa-glass-water" },
@@ -65,9 +75,45 @@ const defaultPhrases = [
     { text: "כן", label: "כן", category: "general", icon: "fa-circle-check" },
     { text: "לא", label: "לא", category: "general", icon: "fa-circle-xmark" },
     { text: "מה אמרת?", label: "סליחה?", category: "general", icon: "fa-rotate-left" },
+    { text: "אני אוטיסטית", label: "אני אוטיסטית", category: "general", icon: "fa-puzzle-piece" },
     { text: "אני מרגיש טוב", label: "שמח", category: "feelings", icon: "fa-face-smile" },
     { text: "משהו כואב לי", label: "כואב לי", category: "feelings", icon: "fa-face-sad-tear" },
-    { text: "אני מרגיש לא טוב", label: "חולה", category: "feelings", icon: "fa-face-thermometer" }
+    { text: "אני מרגיש לא טוב", label: "חולה", category: "feelings", icon: "fa-face-thermometer" },
+    { text: "הכל בסדר", label: "הכל בסדר", category: "feelings", icon: "fa-thumbs-up" },
+    { text: "אני כועס", label: "כועס", category: "feelings", icon: "fa-face-angry" },
+    { text: "אני עצוב", label: "עצוב", category: "feelings", icon: "fa-face-frown" },
+    { text: "אני מפחד", label: "מפחד", category: "feelings", icon: "fa-face-flushed" },
+    { text: "אני נרגש", label: "נרגש", category: "feelings", icon: "fa-face-laugh-beam" },
+    { text: "אני משועמם", label: "משועמם", category: "feelings", icon: "fa-face-meh" },
+    { text: "אני רגוע", label: "רגוע", category: "feelings", icon: "fa-spa" },
+    { text: "קשה לי", label: "קשה לי", category: "feelings", icon: "fa-face-tired" },
+    { text: "אני אוהבת", label: "אוהבת", category: "feelings", icon: "fa-heart" },
+    { text: "אני לחוצה", label: "לחוצה", category: "feelings", icon: "fa-face-grimace" },
+
+    // Food
+    { text: "אני רוצה פסטה", label: "פסטה", category: "food", icon: "fa-bowl-food" },
+    { text: "אני רוצה אורז", label: "אורז", category: "food", icon: "fa-bowl-rice" },
+    { text: "אני רוצה צ'יפס", label: "צ'יפס", category: "food", icon: "fa-utensils" },
+    { text: "אני רוצה גלידה", label: "גלידה", category: "food", icon: "fa-ice-cream" },
+    { text: "רולדין", label: "רולדין", category: "food", icon: "fa-ice-cream" },
+    { text: "ארומה", label: "ארומה", category: "food", icon: "fa-ice-cream" },
+    { text: "אני רוצה גלידת וניל", label: "וניל", category: "food", icon: "fa-ice-cream" },
+    { text: "אני רוצה גלידת שוקולד", label: "שוקולד", category: "food", icon: "fa-ice-cream" },
+    { text: "אני רוצה גלידת תות", label: "תות", category: "food", icon: "fa-ice-cream" },
+    { text: "אני רוצה גלידת פיסטוק", label: "פיסטוק", category: "food", icon: "fa-ice-cream" },
+    { text: "אני רוצה גלידת עוגיות ושמנת", label: "עוגיות ושמנת", category: "food", icon: "fa-ice-cream" },
+    { text: "אני רוצה גלידת קרמל מלוח", label: "קרמל מלוח", category: "food", icon: "fa-ice-cream" },
+    { text: "אני רוצה אלפחורס", label: "אלפחורס", category: "food", icon: "fa-cookie" },
+
+    // Games / Play
+    { text: "אני רוצה לשחק בכרטיסיות", label: "כרטיסיות", category: "games", icon: "fa-clone" },
+    { text: "אני רוצה לשחק במשחק קלפים", label: "משחק קלפים", category: "games", icon: "fa-dice" },
+    { text: "אני רוצה לשחק בבובות", label: "בובות", category: "games", icon: "fa-shapes" },
+    { text: "אני רוצה ללכת לבאולינג", label: "באולינג", category: "games", icon: "fa-bowling-ball" },
+    { text: "אני רוצה ללכת לבריכה", label: "בריכה", category: "games", icon: "fa-person-swimming" },
+    { text: "אני רוצה לראות סרט", label: "סרט", category: "games", icon: "fa-film" },
+    { text: "אני רוצה ללכת לגן משחקים", label: "גן משחקים", category: "games", icon: "fa-child-reaching" },
+    { text: "אני רוצה ללכת לים", label: "ים", category: "games", icon: "fa-umbrella-beach" }
 ];
 
 // Document DOM Elements
@@ -1336,6 +1382,8 @@ function getCategoryIcon(cat) {
         case 'feelings': return 'fa-face-smile';
         case 'social': return 'fa-person-wave-command';
         case 'general': return 'fa-circle-check';
+        case 'food': return 'fa-utensils';
+        case 'games': return 'fa-gamepad';
         default: return 'fa-comment';
     }
 }
